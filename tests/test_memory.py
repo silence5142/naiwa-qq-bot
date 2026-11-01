@@ -4,6 +4,7 @@ import os
 import sqlite3
 import tempfile
 import unittest
+from contextlib import closing
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
@@ -27,7 +28,7 @@ class MemoryTests(unittest.TestCase):
         self.assertEqual(len(history), 60)
         self.assertEqual(history[0], {"role": "user", "content": "【群成员标识：user-0】\nquestion-2"})
         self.assertEqual(history[-1], {"role": "assistant", "content": "answer-31"})
-        with sqlite3.connect(self.path) as connection:
+        with closing(sqlite3.connect(self.path)) as connection:
             self.assertEqual(connection.execute("SELECT COUNT(*) FROM turns").fetchone()[0], 30)
 
     def test_reopening_database_preserves_history_and_reset(self):

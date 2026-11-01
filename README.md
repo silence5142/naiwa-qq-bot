@@ -16,21 +16,28 @@
 
 ## 准备
 
-- Python 3.11 或 3.12。
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) 0.13.6 或更新版本；默认使用 Python 3.11，也支持 Python 3.12。uv 可自动下载所需 Python。
 - QQ 开放平台创建的群机器人，已配置群聊能力及测试群，持有 AppID 和 AppSecret。
 - DeepSeek API Key、可用额度和支持本项目请求格式的模型。
 
 本项目默认模型名为 `deepseek-flash`，识图模块对该模型及其兼容别名做检查。请先确认账户支持相应模型、思考、图像理解和搜索接口；更换其他提供商或任意模型不能保证直接兼容。
 
-## Windows 快速开始
+## 使用 uv 快速开始
 
-在仓库根目录打开 PowerShell：
+Windows 可在 PowerShell 中安装 uv：
 
 ```powershell
-py -3.11 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-Copy-Item .env.example .env
-Copy-Item persona.example.txt persona.txt
+winget install --id=astral-sh.uv -e
+```
+
+安装完成后重新打开 PowerShell，执行 `uv --version` 确认安装成功。其他系统和安装方式参见 [uv 安装文档](https://docs.astral.sh/uv/getting-started/installation/)。
+
+在仓库根目录安装依赖并创建配置：
+
+```powershell
+uv sync --locked
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+if (-not (Test-Path persona.txt)) { Copy-Item persona.example.txt persona.txt }
 notepad .env
 ```
 
@@ -39,7 +46,7 @@ notepad .env
 启动：
 
 ```powershell
-.\.venv\Scripts\python.exe bot.py
+uv run --locked python bot.py
 ```
 
 窗口显示机器人连接成功后，在测试群发送 `@机器人 /ping`。关闭时在运行窗口按 **Ctrl+C**。修改配置或人设后，关闭再启动即可生效。不要同时运行多个使用同一账号的实例。
@@ -50,7 +57,20 @@ notepad .env
 $env:NO_PROXY = "$env:NO_PROXY,api.deepseek.com"
 ```
 
-Linux / macOS 可使用 `python3 -m venv .venv`，随后将上述 Python 路径换为 `.venv/bin/python`，复制文件使用 `cp`。
+Linux / macOS 同样使用 `uv sync --locked` 安装依赖、`uv run --locked python bot.py` 启动；首次配置可执行 `test -f .env || cp .env.example .env` 和 `test -f persona.txt || cp persona.example.txt persona.txt`。
+
+uv 自动管理项目下的 `.venv`，无需手动激活虚拟环境。首次运行可能需要联网下载 Python 和依赖。使用 `--locked` 可以检查锁文件是否与依赖声明一致，避免运行时意外更新锁文件。
+
+### 使用 pip 安装
+
+已安装 Python 3.11 或 3.12 的用户也可以使用 pip。在项目目录执行：
+
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+按上文创建 `.env` 和 `persona.txt` 后，运行 `.\.venv\Scripts\python.exe bot.py`。Linux / macOS 对应的 Python 路径为 `.venv/bin/python`。
 
 ## 配置和人设
 
@@ -96,16 +116,17 @@ Linux / macOS 可使用 `python3 -m venv .venv`，随后将上述 Python 路径�
 离线测试，不连接 QQ、不调用 DeepSeek：
 
 ```powershell
-.\.venv\Scripts\python.exe -m unittest discover -s tests -q
+uv run --locked python -m unittest discover -s tests -q
 ```
 
 单独验证 DeepSeek（会调用真实 API，可能收费）：
 
 ```powershell
-.\.venv\Scripts\python.exe test_deepseek.py
+uv run --locked python test_deepseek.py
 ```
 
-- 缺少 `botpy`：确认使用 `.venv` 中的 Python，并重新安装依赖。
+- 缺少 `botpy`：运行 `uv sync --locked` 安装依赖，并通过 `uv run --locked python bot.py` 启动；pip 用户确认使用 `.venv` 中的 Python。
+- 找不到 `uv`：安装后重新打开终端，执行 `uv --version`；也可参考 uv 文档中的其他安装方式。
 - QQ 鉴权失败或群内无响应：核对凭据、平台权限、测试群与平台要求的网络设置；本程序接收 `GROUP_AT_MESSAGE_CREATE` 事件。
 - `/ping` 正常、AI 回复失败：检查模型权限、API 额度与网络；查看本地诊断日志。
 - 提示没有生成回答：查看 `finish_reason`、token 用量和正文字数；本版已加入受限重试，但不能保证每次都能得到正文。
@@ -115,7 +136,16 @@ Linux / macOS 可使用 `python3 -m venv .venv`，随后将上述 Python 路径�
 
 ## 依赖
 
-依赖版本见 `requirements.txt`，建议在独立的 Python 虚拟环境中安装。
+`pyproject.toml` 声明项目依赖和 Python 版本范围，`uv.lock` 锁定直接与间接依赖，`.python-version` 指定默认 Python 3.11。`requirements.txt` 由锁文件导出，供 pip 用户使用；`.venv` 不提交到 Git。
+
+添加或更新依赖后，重新导出 pip 清单并运行测试：
+
+```powershell
+uv export --locked --format requirements-txt --no-dev --no-emit-project --no-header --no-annotate --output-file requirements.txt
+uv run --locked python -m unittest discover -s tests -q
+```
+
+添加依赖使用 `uv add 包名`，删除依赖使用 `uv remove 包名`；修改 `pyproject.toml` 后执行 `uv lock` 更新锁文件。将 `pyproject.toml`、`uv.lock` 和导出的 `requirements.txt` 一同提交。
 
 QQ 接口使用 `qq-botpy-v2` 社区兼容包（`import botpy`），它并非腾讯原版 SDK 的官方发布包。请勿与同名导入的 `qq-botpy` 同时安装。
 
