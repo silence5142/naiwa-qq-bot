@@ -1,0 +1,37 @@
+# Credentials and private configuration
+.env
+.env.*
+!.env.example
+*.env
+persona.txt
+persona.local.*
+*.pem
+*.key
+.local/
+
+# Runtime data and logs
+data/
+*.sqlite*
+*.db
+*.db-*
+*.log
+*.log.*
+logs/
+downloads/
+backups/
+
+# Python and local tools
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
